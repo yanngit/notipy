@@ -4,6 +4,7 @@ import (
 	"log"
 	"runtime"
 
+	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
@@ -36,12 +37,21 @@ func main() {
 		yPos := mode.Height - height // Show at the bottom of the screen
 		window.SetPos(xPos, yPos)
 
+		// Set key callback to close window with ESC key or simulate button
+		window.SetKeyCallback(func(w *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+			if key == glfw.KeyEscape && action == glfw.Press {
+				w.SetShouldClose(true)
+			}
+		})
+
 		window.MakeContextCurrent()
 
 		go func(w *glfw.Window) {
 			// This is where you update and render
 			for !w.ShouldClose() {
 				// Clear screen
+				gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+
 				glfw.PollEvents()
 				w.SwapBuffers()
 			}
