@@ -2,55 +2,52 @@ package main
 
 import (
 	"log"
-	"os/exec"
-	"strings"
+	"runtime"
 
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/widget"
+	"github.com/go-gl/glfw/v3.3/glfw"
 )
 
-func main() {
-	a := app.New()
-
-	displays, err := getDisplays()
-	if err != nil || len(displays) == 0 {
-		log.Fatalf("Could not find displays: %v", err)
-	}
-
-	for _, display := range displays {
-		win := a.NewWindow("Alert")
-		win.SetContent(container.NewVBox(
-			widget.NewLabel("This is a notification on screen " + display + "!"),
-		))
-
-		win.SetFixedSize(true)
-		win.Resize(fyne.NewSize(300, 100))
-
-		win.Show()
-	}
-
-	a.Run()
+func init() {
+	runtime.LockOSThread()
 }
 
-func getDisplays() ([]string, error) {
-	cmd := exec.Command("xrandr", "--listmonitors")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, err
+func main() {
+	if err := glfw.Init(); err != nil {
+		log.Fatalf("Failed to initialize GLFW: %v", err)
+	}
+	defer glfw.Terminate()
+
+	displays := glfw.GetMonitors()
+	if len(displays) == 0 {
+		log.Fatalf("Could not find any displays")
 	}
 
-	lines := strings.Split(string(output), "\n")
-	var displays []string
+	for i, display := range displays {
+		mode := display.GetVideoMode()
+		width, height := 300, 100
 
-	for _, line := range lines {
-		if strings.Contains(line, "+") {
-			fields := strings.Fields(line)
-			if len(fields) > 3 {
-				displays = append(displays, fields[3])
-			}
+		window, err := glfw.CreateWindow(width, height, "Alert", nil, nil)
+		if err != nil {
+			log.Fatalf("Failed to create window: %v", err)
 		}
+
+		// Position the window based on monitor
+		xPos := i * (mode.Width)
+		yPos := mode.Height - height // Show at the bottom of the screen
+		window.SetPos(xPos, yPos)
+
+		window.MakeContextCurrent()
+
+		go func(w *glfw.Window) {
+			// This is where you update and render
+			for !w.ShouldClose() {
+				// Clear screen
+				glfw.PollEvents()
+				w.SwapBuffers()
+			}
+		}(window)
 	}
-	return displays, nil
+
+	// Keep running
+	select {}
 }
