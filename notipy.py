@@ -167,5 +167,5 @@ def become_daemon():
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
 if __name__ == "__main__":
-    # become_daemon()
+    become_daemon()
     daemon_run()
