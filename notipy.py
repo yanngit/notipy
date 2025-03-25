@@ -6,6 +6,74 @@ import os
 import signal
 import sys
 
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+# If modifying these scopes, delete the file token.json.
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+creds = None
+
+def get_tokens():
+    global creds
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists("token.json"):
+        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "credentials.json", SCOPES
+            )
+            creds = flow.run_local_server(host='127.0.0.1',port=0)
+        # Save the credentials for the next run
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+
+def get_next_upcoming_event():
+    global creds
+    try:
+        service = build("calendar", "v3", credentials=creds)
+
+        # Call the Calendar API
+        now = datetime.datetime.utcnow().isoformat() + "Z"  # 'Z' indicates UTC time
+        print("Getting the next upcoming event")
+        events_result = (
+            service.events()
+            .list(
+                calendarId="primary",
+                timeMin=now,
+                maxResults=3,
+                singleEvents=True,
+                orderBy="startTime",
+            )
+            .execute()
+        )
+        events = events_result.get("items", [])
+
+        if not events:
+            print("No upcoming events found.")
+            return None
+
+        for event in events:
+            event_summary = event.get('summary', 'No Title')
+            start_time_str = event['start'].get('dateTime', event['start'].get('date'))
+            event_start_time = datetime.datetime.fromisoformat(start_time_str)
+            if is_event_already_started(event_start_time):
+                print(f"Event [{event_summary}] on [{event_start_time}] already started, watching next event")
+                continue
+            print(f"Next valid event is [{event_summary}] on [{event_start_time}]")
+            return event
+
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
 def get_mouse_position():
     # Use xdotool to get the current mouse position
     result = subprocess.run("xdotool getmouselocation --shell", shell=True, capture_output=True, text=True)
@@ -15,50 +83,58 @@ def get_mouse_position():
         position[key] = int(value)
     return position['X'], position['Y']
 
-def show_alert():
+# Utility function to check time difference
+def is_event_in_minutes(event_datetime, minutes=2):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    delta = event_datetime.astimezone(tz=datetime.timezone.utc) - now
+    return 0 <= delta.total_seconds() <= minutes * 60
+
+def is_event_already_started(event_datetime):
+    now = datetime.datetime.now(datetime.timezone.utc)
+    delta = event_datetime.astimezone(tz=datetime.timezone.utc) - now
+    return 0 > delta.total_seconds()
+
+
+def show_alert(event_summary, event_start):
     x_pos, y_pos = get_mouse_position()
     root = tk.Tk()
-    root.title("Alert")
+    root.title("Meeting in a few minutes")
+    root.geometry(f"500x200+{x_pos}+{y_pos}")
 
-    # Position the window at the mouse cursor location
-    root.geometry(f"300x100+{x_pos}+{y_pos}")
-
-    # Create an alert message and a close button
-    label = tk.Label(root, text="You have a scheduled event!")
+    label_text = f"Upcoming: {event_summary}\nat {event_start.strftime('%H:%M')}"
+    label = tk.Label(root, text=label_text)
     label.pack(pady=10)
 
     close_button = tk.Button(root, text="Close", command=root.destroy)
     close_button.pack(pady=10)
 
-    root.attributes('-topmost', True)  # Set the window on top
+    root.attributes('-topmost', True)
     root.mainloop()
-
-def match_schedule(day_of_week, current_hour, current_minute):
-    schedule = {
-        'Monday': [(9, 14), (9, 29), (9, 58), (13, 58), (15,28)],
-        'Tuesday': [(9, 14), (9, 29), (14, 14)],
-        'Wednesday': [(9, 14), (9, 29),(11, 50)],
-        'Thursday': [(9, 14), (9, 29), (14,13), (16,58)],
-        'Friday': [(9, 58)],
-        'Saturday': [],
-        'Sunday': [],
-    }
-
-    times = schedule.get(day_of_week, [])
-    return (current_hour, current_minute) in times
 
 def daemon_run():
     while True:
-        now = datetime.datetime.now()
-        current_day = now.strftime("%A")  # Get the day of the week
-        current_hour = now.hour
-        current_minute = now.minute
+        get_tokens()
+        event = get_next_upcoming_event()
+        if event:
+            event_summary = event.get('summary', 'No Title')
+            start_time_str = event['start'].get('dateTime', event['start'].get('date'))
 
-        if match_schedule(current_day, current_hour, current_minute):
-            show_alert()
-            time.sleep(60)  # Wait a minute to prevent multiple alerts in the same minute
-        else:
-            time.sleep(30)  # Check every 30 seconds
+            # Parse event start into datetime object
+            event_start_time = datetime.datetime.fromisoformat(start_time_str)
+            if event_start_time.tzinfo is None:
+                event_start_time = event_start_time.replace(tzinfo=datetime.timezone.utc)
+
+            # Check if the event is in less than 2 minutes from now
+            if is_event_in_minutes(event_start_time, minutes=2):
+                print('event is close, showing an alert')
+                show_alert(event_summary, event_start_time)
+                # Wait for 2 min and 1 second to avoid multiple alerts for one event
+                time.sleep(121)
+                continue
+        # If no event is soon or there were no events, wait 30 seconds then check again
+        print ('event is too far, sleeping and back in the loop')
+        time.sleep(30)
+
 
 def become_daemon():
     # Fork the process to run in the background
@@ -68,8 +144,8 @@ def become_daemon():
     if os.fork():
         sys.exit(0)
     # Redirect standard file descriptors
-    stdout='/var/log/notipy_out.log'
-    stderr='/var/log/notipy_err.log'
+    stdout='./notipy_out.log'
+    stderr='./notipy_err.log'
     # stdin
     with open('/dev/null', 'r') as dev_null:
         os.dup2(dev_null.fileno(), sys.stdin.fileno())
@@ -91,5 +167,5 @@ def become_daemon():
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
 if __name__ == "__main__":
-    become_daemon()
+    # become_daemon()
     daemon_run()

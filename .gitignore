@@ -1,2 +1,7 @@
 .idea/
 notipy
+client_secret_*
+*.googleusercontent.com.json
+credentials.json
+token.json
+*.log

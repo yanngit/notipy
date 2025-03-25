@@ -6,11 +6,19 @@ Available only for linux, install pre-requisite for your system with:
 sudo apt-get update
 sudo apt-get install -y python3.10-tk xdotool
 ```
-Python 3.10 is needed
+Python 3.10 is needed with at least these packages to install: 
+```bash 
+pip install --upgrade google-api-python-client google-auth-httplib2 google-auth-oauthlib
+```
+
+## Google calendar authent
+Get a *credentials.json* file for OAUTH API connexion. Follow [this](https://developers.google.com/calendar/api/quickstart/python) 
+tutorial if you're new to GCP. The program is expecting the file to be named `credentials.json` so rename it after 
+download to match this exact name.
 
 ## Configure
 Update the notipy.py file by changing the calendar values:
-```
+``` python
 schedule = {
         'Monday': [(9, 14), (9, 24), (9, 58), (13, 58), (15,28)],
         'Tuesday': [(9, 14), (9, 24), (15, 0)],
