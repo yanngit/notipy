@@ -35,10 +35,10 @@ def show_alert():
 
 def match_schedule(day_of_week, current_hour, current_minute):
     schedule = {
-        'Monday': [(9, 14), (9, 24), (9, 58), (13, 58), (15,28)],
-        'Tuesday': [(9, 14), (9, 24), (15, 0)],
-        'Wednesday': [(9, 14), (9, 24),(11, 50)],
-        'Thursday': [(9, 14), (9, 24), (14,13), (16,58)],
+        'Monday': [(9, 14), (9, 29), (9, 58), (13, 58), (15,28)],
+        'Tuesday': [(9, 14), (9, 29), (14, 14)],
+        'Wednesday': [(9, 14), (9, 29),(11, 50)],
+        'Thursday': [(9, 14), (9, 29), (14,13), (16,58)],
         'Friday': [(9, 58)],
         'Saturday': [],
         'Sunday': [],
