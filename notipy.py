@@ -125,7 +125,7 @@ def daemon_run():
                 event_start_time = event_start_time.replace(tzinfo=datetime.timezone.utc)
 
             # Check if the event is in less than 2 minutes from now
-            if is_event_in_minutes(event_start_time, minutes=2):
+            if is_event_in_minutes(event_start_time, minutes=1):
                 print('event is close, showing an alert')
                 show_alert(event_summary, event_start_time)
                 # Wait for 2 min and 1 second to avoid multiple alerts for one event
@@ -167,5 +167,5 @@ def become_daemon():
     signal.signal(signal.SIGHUP, signal.SIG_IGN)
 
 if __name__ == "__main__":
-    become_daemon()
+    # become_daemon()
     daemon_run()
