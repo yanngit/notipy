@@ -24,7 +24,16 @@ The app is running as a daemon so to find it you can:
 `ps -aux | grep notipy` and then `kill -9 NOTIPY_PID`
 
 ## Run the app as a service
-You can install *notipy* as a linux service by running the `sudo ./install-service.sh` command.
+You can install *notipy* as a linux service by running the `./install-service.sh` command.
+Once installed you can : 
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable notipy
+sudo systemctl start notipy
+systemctl status notipy
+```
+
+And verify everything is working fine.
 
 
 

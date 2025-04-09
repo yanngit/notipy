@@ -31,7 +31,3 @@ User=$user
 
 [Install]
 WantedBy=multi-user.target" | sudo tee /etc/systemd/system/$program_name.service
-
-systemctl daemon-reload
-systemctl enable $program_name
-systemctl start $program_name
