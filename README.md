@@ -17,7 +17,7 @@ tutorial if you're new to GCP. The program is expecting the file to be named `cr
 download to match this exact name.
 
 ## Running the app 
-sudo python notipy.py
+python3.10 notipy.py
 
 ## Stop the app
 The app is running as a daemon so to find it you can: 
@@ -27,10 +27,9 @@ The app is running as a daemon so to find it you can:
 You can install *notipy* as a linux service by running the `./install-service.sh` command.
 Once installed you can : 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable notipy
-sudo systemctl start notipy
-systemctl status notipy
+systemctl --user daemon-reload
+systemctl --user enable notipy
+systemctl --user status notipy
 ```
 
 And verify everything is working fine.
