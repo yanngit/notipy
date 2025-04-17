@@ -15,12 +15,16 @@ from googleapiclient.errors import HttpError
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 creds = None
+last_token_refresh = 0
 
 def get_tokens():
-    global creds
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
+    global creds, last_token_refresh
+    current_time = time.time()
+    # Check if the token was refreshed within the last hour (3600 seconds)
+    if current_time - last_token_refresh < 3600:
+        print("Token refresh skipped, last refresh was less than an hour ago.")
+        return
+
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
         # If there are no (valid) credentials available, let the user log in.
