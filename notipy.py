@@ -1,5 +1,4 @@
 import subprocess
-import tkinter as tk
 import datetime
 import time
 import os
@@ -11,6 +10,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+from ui import show_alert
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
@@ -78,15 +79,6 @@ def get_next_upcoming_event():
     except HttpError as error:
         print(f"An error occurred: {error}")
 
-def get_mouse_position():
-    # Use xdotool to get the current mouse position
-    result = subprocess.run("xdotool getmouselocation --shell", shell=True, capture_output=True, text=True)
-    position = {}
-    for line in result.stdout.splitlines():
-        key, value = line.split('=')
-        position[key] = int(value)
-    return position['X'], position['Y']
-
 # Utility function to check time difference
 def is_event_in_minutes(event_datetime, minutes=2):
     now = datetime.datetime.now(datetime.timezone.utc)
@@ -98,22 +90,9 @@ def is_event_already_started(event_datetime):
     delta = event_datetime.astimezone(tz=datetime.timezone.utc) - now
     return 0 > delta.total_seconds()
 
-
-def show_alert(event_summary, event_start):
-    x_pos, y_pos = get_mouse_position()
-    root = tk.Tk()
-    root.title("Meeting in a few minutes")
-    root.geometry(f"500x200+{x_pos}+{y_pos}")
-
-    label_text = f"Upcoming: {event_summary}\nat {event_start.strftime('%H:%M')}"
-    label = tk.Label(root, text=label_text)
-    label.pack(pady=10)
-
-    close_button = tk.Button(root, text="Close", command=root.destroy)
-    close_button.pack(pady=10)
-
-    root.attributes('-topmost', True)
-    root.mainloop()
+def go_to_meet(link, root):
+    subprocess.run(["xdg-open", link])
+    root.destroy()
 
 def daemon_run():
     while True:
@@ -122,6 +101,7 @@ def daemon_run():
         if event:
             event_summary = event.get('summary', 'No Title')
             start_time_str = event['start'].get('dateTime', event['start'].get('date'))
+            event_link = event.get('hangoutLink', '')
 
             # Parse event start into datetime object
             event_start_time = datetime.datetime.fromisoformat(start_time_str)
@@ -131,7 +111,7 @@ def daemon_run():
             # Check if the event is in less than 2 minutes from now
             if is_event_in_minutes(event_start_time, minutes=1):
                 print('event is close, showing an alert')
-                show_alert(event_summary, event_start_time)
+                show_alert(event_summary, event_start_time, event_link)
                 # Wait for 2 min and 1 second to avoid multiple alerts for one event
                 time.sleep(121)
                 continue
