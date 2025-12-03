@@ -90,10 +90,6 @@ def is_event_already_started(event_datetime):
     delta = event_datetime.astimezone(tz=datetime.timezone.utc) - now
     return 0 > delta.total_seconds()
 
-def go_to_meet(link, root):
-    subprocess.run(["xdg-open", link])
-    root.destroy()
-
 def daemon_run():
     while True:
         get_tokens()
