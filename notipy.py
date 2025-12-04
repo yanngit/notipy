@@ -1,4 +1,3 @@
-import subprocess
 import datetime
 import time
 import os
@@ -114,7 +113,6 @@ def daemon_run():
         # If no event is soon or there were no events, wait 30 seconds then check again
         print ('event is too far, sleeping and back in the loop')
         time.sleep(30)
-
 
 def become_daemon():
     # Fork the process to run in the background
